@@ -237,7 +237,7 @@ UBeaconUARTController.prototype.getConnectionInfo = function( callback )
  *
  * Set TXPower set on the tested device
  *
- * @param txPower 	  Value to set
+ * @param txPower     Value to set
  * @param function    function( responseData ) - will be called 
  *                    when data is received from uBeacon
  *
@@ -1060,6 +1060,8 @@ UBeaconUARTController.prototype.executeMeshEventMessage = function( cmdByte, res
     var txMsgType = parseInt(responseData.substr(6,2),16);
     var success = parseInt(responseData.substr(8,2),16);
     var crc16 = parseInt(responseData.substr(10,4), 16);
+    //Remove callback for mesh message after receiving an ACK to not call timeout
+    this.removeOldCallbacks(this.uartCmd.eventMeshMessage);
     this.emit( this.EVENTS.MESH_MSG__ACK , srcAddr, txMsgType, success, crc16 , null );
   }
   else if( msgType === uartMeshMessageType.userMessage ){
@@ -1114,6 +1116,9 @@ UBeaconUARTController.prototype.executeConnectedEventMessage = function( cmdByte
 UBeaconUARTController.prototype.removeOldCallbacks = function( cmdByte )
 {
   if( this._callbacks[cmdByte] != null ){
+    if( this._callbacks[cmdByte].timeout != null ){
+      clearTimeout(this._callbacks[cmdByte].timeout);
+    }
     delete this._callbacks[cmdByte];
   } 
 };
