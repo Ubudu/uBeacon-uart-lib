@@ -1,2 +1,3 @@
-# node-uBeacon-uart-lib
+# uBeacon-uart-lib
+
 Serial communication library for uBeacon devices

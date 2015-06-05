@@ -1,0 +1,16 @@
+{
+  "name": "ubeacon-uart-test",
+  "version": "0.0.2",
+  "description": "Node.js library for UART communication with uBeacons.",
+  "main": "./uBeaconUARTController",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "commander": "2.5.0",
+    "serialport": "1.4.6",
+    "async": "0.9.0"
+  },
+  "private": false
+}
