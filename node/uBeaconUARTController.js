@@ -873,7 +873,10 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = data;
       break;
     case this.uartCmd.none:       
+      responseData = data;
+      break;
     default:
+      responseData = data;
       break;
   }
 
