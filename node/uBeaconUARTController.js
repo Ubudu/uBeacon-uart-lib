@@ -741,7 +741,9 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdByte, data, ca
     if( self._callbacks[cmdByte] != null ){
       var cb = self._callbacks[cmdByte].callback;
       self.removeOldCallbacks(cmdByte);
-      return cb(null, e);
+      if( cb != null ){
+        return cb(null, e);
+      }
     }
   }, self._timeoutMs);
 
