@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Example script for sending and receiving mesh messages
+ * Example script for sending mesh remote management messages
  */
 
 var UBeaconUARTController = require('../uBeaconUARTController').UBeaconUARTController;
@@ -18,9 +18,6 @@ program
   .parse(process.argv);
 
 var ubeacon = new UBeaconUARTController(program.serialPort, program.baudRate);
-// ubeacon.setUARTRawInputLoggingEnabled(true);
-// ubeacon.setUARTLoggingEnabled(true);
-
 
 ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
 
@@ -31,12 +28,17 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
         callback();
       });
     },
-    //Send message
+    //Build LED-on message and send it
     function(callback){
-      ubeacon.sendMeshGenericMessage( program.destinationAddress, "Hello from node.js", function( response ){
-        console.log( '[ubeacon] Mesh message sent' );
-        callback();
-      });
+      var msg = ubeacon.getCommandString( false, ubeacon.uartCmd.led, new Buffer('03','hex') );
+      ubeacon.sendMeshRemoteManagementMessage( program.destinationAddress, msg.toString(), null);
+      setTimeout(callback, 2000);
+    },
+    //Build LED-off message and send it
+    function(callback){
+      var msg = ubeacon.getCommandString( false, ubeacon.uartCmd.led, new Buffer('00','hex') );
+      ubeacon.sendMeshRemoteManagementMessage( program.destinationAddress, msg.toString(), null);
+      setTimeout(callback, 2000);
     },
     //Disable mesh
     function(callback){
@@ -49,9 +51,7 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       callback();
     }
   ]);
-
 });
-
 
 /*
  * Log an ACK message
@@ -59,19 +59,3 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
 ubeacon.on(ubeacon.EVENTS.MESH_MSG__ACK, function(dstAddr, msgType, status, checksum){
   console.log('[mesh] Received ACK from device=' + dstAddr + ', status=' + status);
 });
-
-/*
- * Log message received via the node connected through UART cable
- */
-ubeacon.on(ubeacon.EVENTS.MESH_MSG__USER, function(dstAddr, msgType, msg){
-  console.log('[mesh] Received message from device=' + dstAddr + ', data=' + msg);
-});
-
-/*
- * Log a BLE connection event (connect/disconnect)
- */
-ubeacon.on(ubeacon.EVENTS.CONNECTED, function(connected, connectionInfo){
-  console.log( 'Connected: ', connected );
-  console.log( 'connectionInfo: ', connectionInfo );
-});
-

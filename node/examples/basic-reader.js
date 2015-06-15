@@ -1,6 +1,10 @@
   /*jslint node: true */
 'use strict';
 
+/**
+ * Example script for reading most of uBeacon properties
+ */
+
 var UBeaconUARTController = require('../uBeaconUARTController').UBeaconUARTController;
 var program = require('commander');
 var async = require('async');

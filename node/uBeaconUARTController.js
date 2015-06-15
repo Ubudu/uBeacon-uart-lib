@@ -1140,9 +1140,9 @@ UBeaconUARTController.prototype.notifyResponse = function( cmdByte , data )
       this.removeOldCallbacks(cmdByte);   
       c.callback(data);
     }    
-  }else{
-    var error = new Error('No callback was assigned for 0x' + dataUtils.uint8ToHex(cmdByte) + ' command. Received ' + data);
-    this.emit( 'error' , error );
+  // }else{
+  //   var error = new Error('No callback was assigned for 0x' + dataUtils.uint8ToHex(cmdByte) + ' command. Received ' + data);
+  //   this.emit( 'error' , error );
   }
 };
 
