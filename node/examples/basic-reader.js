@@ -12,10 +12,9 @@ var async = require('async');
 program
   .version('0.0.1')
   .option('-s, --serial-port [port]', 'Serial port to use (eg. "COM10" od "/dev/tty.usbmodem1"' ,'/dev/tty.usbserial-A5026UEU')
-  .option('-b, --baud-rate [baud]', 'Baud rate', parseInt, 115200)
   .parse(process.argv);
 
-var ubeacon = new UBeaconUARTController(program.serialPort, program.baudRate);
+var ubeacon = new UBeaconUARTController(program.serialPort, 115200);
 // ubeacon.setUARTRawInputLoggingEnabled(true);
 // ubeacon.setUARTLoggingEnabled(true);
 var ledOn = true;
@@ -23,15 +22,19 @@ var ledOn = true;
 ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
   console.log('ubeacon UART ready');
 
-  async.series([
+  async.waterfall([
     function(callback){
       console.log( 'Set led state to ' + ledOn);
-      ubeacon.setLED( ledOn , function(ledState, error ){
-        console.log( '[ubeacon] Received led state: ' + ledState );
-        console.log( 'Waiting 2 seconds.');
-        setTimeout(function(){
-          callback();
-        }, 2000);
+      ubeacon.setLED( ledOn , function(ledState, error){
+        if( error == null ){
+          console.log( '[ubeacon] Received led state: ' + ledState );
+          console.log( 'Waiting 2 seconds.');
+          setTimeout(function(){
+            callback(null);
+          }, 2000);
+        }else{
+          return callback(error);
+        }
       });
     },
     function(callback){
@@ -39,111 +42,116 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       console.log( 'Set led state to ' , ledOn);
       ubeacon.setLED( ledOn , function(ledState, error ){
         console.log( '[ubeacon] Received led state: ' , ledState );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getUARTProtocolVersion( function( version , error ){
         console.log( '[ubeacon] Received protocol version' , version );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getFirmwareVersion( function( version, error ){
         console.log( '[ubeacon] Received firmware version' , version );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getHardwareModel( function( model, error ){
         console.log( '[ubeacon] Received hardware model' , model );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getHardwareVersion( function( version, error ){
         console.log( '[ubeacon] Received hardware version' , version );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getMacAddress( function( address, error ){
         console.log( '[ubeacon] Received macAddress' , address );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getTXPower( function( txPower, error ){
         console.log( '[ubeacon] Received txPower' , txPower );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getSerialNumber( function( serialNumber, error ){
         console.log( '[ubeacon] Received serial number' , serialNumber );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getBatteryLevel( function( batteryLevel, error ){
         console.log( '[ubeacon] Received battery level' , batteryLevel );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getRTCTime( function( BCDDate, error ){
         console.log( '[ubeacon] Received RTC bcd' , BCDDate );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getOpenDaySchedule( function( openDaySchedule, error ) {
         console.log( '[ubeacon] Received open day schedule', openDaySchedule );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getAdvertisingState( function( advertisingState, error ){
         console.log( '[ubeacon] Received advertisingState' , advertisingState );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getAdvertisingInterval( function( advertisingInterval, error ){
         console.log( '[ubeacon] Received advertisingInterval' , 
           advertisingInterval );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getProximityUUID( function( proximityUUID, error ){
         console.log( '[ubeacon] Received proximityUUID' , proximityUUID );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getMajor( function( major, error ){
         console.log( '[ubeacon] Received major' , major );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getMinor( function( minor, error ){
         console.log( '[ubeacon] Received minor' , minor );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       ubeacon.getConnectionInfo( function( connectionInfo, error ){
         console.log('[ubeacon] Received connection info', connectionInfo );
-        callback();
+        callback(error);
       });
     },
     function(callback){
       console.log('Done. Waiting for events (eg. button press)');
+      callback(null);
     }
-
-  ]);
+  ], function(error, response){
+    if( error != null ){
+      console.log( error );
+      process.exit(1);
+    }
+  });
   
 });
 

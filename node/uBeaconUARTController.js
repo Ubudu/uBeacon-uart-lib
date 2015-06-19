@@ -13,7 +13,7 @@ util.inherits(UBeaconUARTController, EventEmitter);
 
 
 module.exports.UBeaconUARTController = UBeaconUARTController;
-
+module.exports.UBeaconMeshSettingsRegister = UBeaconMeshSettingsRegister;
 
 var uartLoggingEnabled = false;
 var uartRawInputLoggingEnabled = false;
@@ -59,6 +59,7 @@ function UBeaconUARTController( serialPort , baudRate )
     MESH_MSG__USER:               'mesh-user',
     MESH_MSG__REMOTE_MANAGEMENT:  'mesh-remote-management',
     MSG:                          'message',
+    DFU_ERROR:                    'dfu_error',
   };
 
 
@@ -99,36 +100,38 @@ function UBeaconUARTController( serialPort , baudRate )
     eventConnected:         0x40,   //'@'
     eventButton:            0x24,   //'$'
     eventMeshMessage:       0x5e,   //'^'
+    eventDfuError:          0x2a,   //'*'
   };
 
-  //
-  this.serialPort = new SerialPort( serialPort, { 
-    baudrate: baudRate, 
-    parser: serialport.parsers.readline('\r\n')
-  });
+  if( serialPort != null ){
+    this.serialPort = new SerialPort( serialPort, { 
+      baudrate: baudRate, 
+      parser: serialport.parsers.readline('\r\n')
+    });
 
-  this.serialPort.on('open', function(){
+    this.serialPort.on('open', function(){
+        
+      self.serialPort.flush(function(err){
+      });
+
+      self.serialPort.on('data', function(data) {
+        //filter incoming UART responses data 
+        var tmp = /(r:.*$)/.exec(data);
+        if( uartRawInputLoggingEnabled === true ){
+          console.log( 'Incoming UART data: ' , data );
+        }
+
+        if( tmp != null && tmp.length >= 1 ){
+          self.emit( 'data' , tmp[1] );
+          self.parseIncomingSerialData( tmp[1] );
+        }
+      });
       
-    self.serialPort.flush(function(err){
+      self.ready = true;
+      self.emit( self.EVENTS.UART_READY );
+      
     });
-
-    self.serialPort.on('data', function(data) {
-      //filter incoming UART responses data 
-      var tmp = /(r:.*$)/.exec(data);
-      if( uartRawInputLoggingEnabled === true ){
-        console.log( 'Incoming UART data: ' , data );
-      }
-
-      if( tmp != null && tmp.length >= 1 ){
-        self.emit( 'data' , tmp[1] );
-        self.parseIncomingSerialData( tmp[1] );
-      }
-    });
-    
-    self.ready = true;
-    self.emit( self.EVENTS.UART_READY );
-    
-  });
+  }
 }
 
 /**
@@ -598,6 +601,37 @@ UBeaconUARTController.prototype.getMeshSettingsRegister = function( callback )
 };
 
 
+UBeaconUARTController.prototype.setMeshSettingsRegisterObject = function( meshSettingsRegister , callback )
+{
+  var _callback = function( data , error ){
+    if( error == null ){
+      var meshSettings = new UBeaconMeshSettingsRegister();
+      meshSettings.setFromBytes( data );
+      callback( meshSettings , null );
+    }else{
+      callback( null, error );
+    }
+  };
+
+  var hexStr = meshSettingsRegister.getBytes();
+  this.setMeshSettingsRegister( hexStr.substr(0,2) , hexStr.substr(2,2) , _callback );
+};
+
+UBeaconUARTController.prototype.getMeshSettingsRegisterObject = function( callback )
+{
+  var _callback = function( data, error ){
+    if( error == null ){
+      var meshSettings = new UBeaconMeshSettingsRegister();
+      meshSettings.setFromBytes( data );
+      callback( meshSettings , null );
+    }else{
+      callback( null, error );
+    }
+  };
+
+  this.getMeshSettingsRegister( _callback );
+};
+
 /**
  *
  */
@@ -737,7 +771,7 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdByte, data, ca
   //
   var self = this;
   cb.timeout = setTimeout(function(){
-    var e = new Error('Receving response for cmd=' + cmdByte + ' timed out. Is UART enabled on the board?');
+    var e = new Error('Receving response for cmd=0x' + dataUtils.uint8ToHex(cmdByte) + ' timed out. Is UART enabled on the board and is the board connected?');
     if( self._callbacks[cmdByte] != null ){
       var cb = self._callbacks[cmdByte].callback;
       self.removeOldCallbacks(cmdByte);
@@ -774,7 +808,8 @@ UBeaconUARTController.prototype.parseIncomingSerialData = function( serialDataBu
         cmdByte === this.uartCmd.eventButton || 
         cmdByte === this.uartCmd.eventMeshMessage || 
         cmdByte === this.uartCmd.eventMessage || 
-        cmdByte === this.uartCmd.eventConnected ){
+        cmdByte === this.uartCmd.eventConnected || 
+        cmdByte === this.uartCmd.eventDfuError ){
       this.executeIncomingEventData( cmdByte, data );
     }else{
       var responseData = this.convertIncomingResponseData( cmdByte, data );
@@ -907,6 +942,9 @@ UBeaconUARTController.prototype.executeIncomingEventData = function( eventByte, 
       break;
     case this.uartCmd.eventConnected:
       this.executeConnectedEventMessage( eventByte, data );
+      break;
+    case this.uartCmd.eventDfuError:
+      this.executeDFUErrorEventMessage( eventByte, data );
       break;
   }
 };
@@ -1110,6 +1148,14 @@ UBeaconUARTController.prototype.executeConnectedEventMessage = function( cmdByte
   this.emit( this.EVENTS.CONNECTED, info.connected, info.macAddress );
 }
 
+/**
+ *
+ */
+UBeaconUARTController.prototype.executeDFUErrorEventMessage = function( cmdByte, responseData )
+{
+  this.emit( this.EVENTS.DFU_ERROR, responseData );  
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Helper functions
 //////////////////////////////////////////////////////////////////////////////
@@ -1140,9 +1186,9 @@ UBeaconUARTController.prototype.notifyResponse = function( cmdByte , data )
       this.removeOldCallbacks(cmdByte);   
       c.callback(data);
     }    
-  // }else{
-  //   var error = new Error('No callback was assigned for 0x' + dataUtils.uint8ToHex(cmdByte) + ' command. Received ' + data);
-  //   this.emit( 'error' , error );
+  }else{
+    // var error = new Error('No callback was assigned for 0x' + dataUtils.uint8ToHex(cmdByte) + ' command. Received ' + data);
+    // this.emit( 'error' , error );
   }
 };
 
@@ -1294,4 +1340,98 @@ UBeaconUARTController.prototype.dateToBCDAlarm = function( date )
     dataUtils.uint8ToHex(0xC3), //For backwards compatibility. Overriden by FW while setting alarm 
   ];
   return retVal.join("");
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// Mesh register object conversion functions
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ *
+ */
+function UBeaconMeshSettingsRegister()
+{
+  this.enabled = false;
+  this.allow_non_auth_connections = false;
+  this.always_connectable = false;
+  this.enable_mesh_window = false;
+  this.mesh_window_on_hour = 0;
+  this.mesh_window_duration = 0;
+}
+
+/**
+ *
+ */
+UBeaconMeshSettingsRegister.prototype.setFromBytes = function( bytesHexString )
+{
+  var byte0 = parseInt(bytesHexString.substr(0,2), 16);
+  var byte1 = parseInt(bytesHexString.substr(2,2), 16);
+
+  this.enabled = ( byte0 & (1<<0) ) != 0;
+  this.allow_non_auth_connections = ( byte0 & (1<<1) ) != 0;
+  this.always_connectable = ( byte0 & (1<<2) ) != 0;
+  this.enable_mesh_window = ( byte0 & (1<<3) ) != 0;
+  this.mesh_window_on_hour = ( byte1 & 0x1f );
+  this.mesh_window_duration = ((byte1 & 0xe0 ) >> 5) * 10;
+};
+
+/**
+ *
+ */
+UBeaconMeshSettingsRegister.prototype.setFrom = function( meshSettings )
+{
+  this.enabled = meshSettings.enabled;
+  this.allow_non_auth_connections = meshSettings.allow_non_auth_connections;
+  this.always_connectable = meshSettings.always_connectable;
+  this.enable_mesh_window = meshSettings.enable_mesh_window;
+  this.mesh_window_on_hour = meshSettings.mesh_window_on_hour;
+  this.mesh_window_duration = meshSettings.mesh_window_duration;
+};
+
+/**
+ *
+ */
+UBeaconMeshSettingsRegister.prototype.getBytes = function()
+{
+  var byte0 = 0;
+  var byte1 = 0;
+  
+  //
+  var enabled = this.enabled;
+  if( enabled == true ){ byte0 |= (1<<0);}   //set bit flag
+  if( enabled == false ){ byte0 &= ~(1<<0);}  //clear bit flag
+  
+  //
+  var acceptNonAuthconnections = this.allow_non_auth_connections;
+  if( acceptNonAuthconnections == true ){ byte0 |= (1<<1);}
+  if( acceptNonAuthconnections == false ){ byte0 &= ~(1<<1);}
+
+  //
+  var alwaysConnectable = this.always_connectable;
+  if( alwaysConnectable == true ){ byte0 |= (1<<2);}
+  if( alwaysConnectable == false ){ byte0 &= ~(1<<2);}
+
+  //
+  var enableMeshWindow = this.enable_mesh_window;
+  if( enableMeshWindow == true ){ byte0 |= (1<<3);}
+  if( enableMeshWindow == false ){ byte0 &= ~(1<<3);}
+
+  var onHour = this.mesh_window_on_hour;
+  if( onHour < 0 ){ onHour = 0; }
+  if( onHour > 23 ){ onHour = 23; }
+
+  var duration = this.mesh_window_duration;
+  if( duration < 0 ){ duration = 0; }
+  if( duration > 60 ){ duration = 60; }
+  duration = Math.round(duration/10);
+
+  byte1 = onHour & 0x1f;          //0b00011111 mask
+  byte1 |= ( duration << 5 ) & 0xe0;  //0b11100000 mask
+
+  //
+  var retVal = ''
+
+  retVal += dataUtils.zeroPad((byte0).toString(16),2);
+  retVal += dataUtils.zeroPad((byte1).toString(16),2);
+  return retVal;
 };

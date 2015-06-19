@@ -14,10 +14,9 @@ program
   .version('0.0.1')
   .option('-s, --serial-port [port]', 'Serial port to use (eg. "COM10" od "/dev/tty.usbmodem1"' ,'/dev/tty.usbserial-A5026UEU')
   .option('-a, --destination-address [address]', 'Destination address of the device', 12337)
-  .option('-b, --baud-rate [baud]', 'Baud rate', parseInt, 115200)
   .parse(process.argv);
 
-var ubeacon = new UBeaconUARTController(program.serialPort, program.baudRate);
+var ubeacon = new UBeaconUARTController(program.serialPort, 115200);
 
 ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
 
