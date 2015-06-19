@@ -48,6 +48,7 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     //Try to enable mesh if launch parameter has been specified
     function(callback){
       if( meshSettings.enabled === false && program.enableMesh === true ){
+        console.log( 'Mesh disabled on device. Enabling.' );
         meshSettings.enabled = true;
         ubeacon.setMeshSettingsRegisterObject( meshSettings, function(data, error){
           if( error === null ){
