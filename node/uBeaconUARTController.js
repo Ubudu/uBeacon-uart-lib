@@ -60,6 +60,7 @@ function UBeaconUARTController( serialPort , baudRate )
     MESH_MSG__REMOTE_MANAGEMENT:  'mesh-remote-management',
     MSG:                          'message',
     DFU_ERROR:                    'dfu_error',
+    DFU_WRITTEN:                  'dfu_written',
   };
 
 
@@ -101,6 +102,7 @@ function UBeaconUARTController( serialPort , baudRate )
     eventButton:            0x24,   //'$'
     eventMeshMessage:       0x5e,   //'^'
     eventDfuError:          0x2a,   //'*'
+    eventDfuWritten:        0x23,   //'#'
   };
 
   if( serialPort != null ){
@@ -782,9 +784,20 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdByte, data, ca
   }, self._timeoutMs);
 
   this._callbacks[cmdByte] = cb;
-  this.serialPort.write(cmdBuffer);
+  this.writeRaw(cmdBuffer);
 };
 
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.writeRaw = function( data )
+{
+  if( uartLoggingEnabled ){
+    console.log( '[UART>>] sending: ' , data.toString('hex'));
+  }
+  this.serialPort.write( data );
+};
 
 /**
  * Parse incoming serial data buffer into useable data
@@ -809,7 +822,8 @@ UBeaconUARTController.prototype.parseIncomingSerialData = function( serialDataBu
         cmdByte === this.uartCmd.eventMeshMessage || 
         cmdByte === this.uartCmd.eventMessage || 
         cmdByte === this.uartCmd.eventConnected || 
-        cmdByte === this.uartCmd.eventDfuError ){
+        cmdByte === this.uartCmd.eventDfuError || 
+        cmdByte === this.uartCmd.eventDfuWritten ){
       this.executeIncomingEventData( cmdByte, data );
     }else{
       var responseData = this.convertIncomingResponseData( cmdByte, data );
@@ -945,6 +959,9 @@ UBeaconUARTController.prototype.executeIncomingEventData = function( eventByte, 
       break;
     case this.uartCmd.eventDfuError:
       this.executeDFUErrorEventMessage( eventByte, data );
+      break;
+    case this.uartCmd.eventDfuWritten:
+      this.executeDFUWrittenEventMessage( eventByte, data );
       break;
   }
 };
@@ -1135,7 +1152,7 @@ UBeaconUARTController.prototype.executeMeshEventMessage = function( cmdByte, res
 UBeaconUARTController.prototype.executeMessageEventMessage = function( cmdByte, responseData )
 {
   this.emit( this.EVENTS.MSG, responseData );
-}
+};
 
 /**
  *
@@ -1146,7 +1163,7 @@ UBeaconUARTController.prototype.executeConnectedEventMessage = function( cmdByte
   // var connectionInfo = responseData.substr(2);
   var info = this.parseConnectionInfoResponse( cmdByte, responseData );
   this.emit( this.EVENTS.CONNECTED, info.connected, info.macAddress );
-}
+};
 
 /**
  *
@@ -1154,7 +1171,16 @@ UBeaconUARTController.prototype.executeConnectedEventMessage = function( cmdByte
 UBeaconUARTController.prototype.executeDFUErrorEventMessage = function( cmdByte, responseData )
 {
   this.emit( this.EVENTS.DFU_ERROR, responseData );  
-}
+};
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.executeDFUWrittenEventMessage = function( cmdByte, responseData )
+{
+  var controlValue = parseInt(responseData, 16);
+  this.emit( this.EVENTS.DFU_WRITTEN, controlValue );    
+};
 
 //////////////////////////////////////////////////////////////////////////////
 // Helper functions
