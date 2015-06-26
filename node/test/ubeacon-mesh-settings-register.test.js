@@ -116,6 +116,14 @@ describe('UBeaconMeshSettingsRegister data conversions', function(){
     expect(reg.mesh_window_on_hour).to.equal(0);
     expect(reg.mesh_window_duration).to.equal(60);
 
+    reg.setFromBytes('ffff');
+    expect(reg.enabled).to.equal(false);    
+    expect(reg.allow_non_auth_connections).to.equal(false);
+    expect(reg.always_connectable).to.equal(false);
+    expect(reg.enable_mesh_window).to.equal(false);
+    expect(reg.mesh_window_on_hour).to.equal(0);
+    expect(reg.mesh_window_duration).to.equal(0);
+
     done();
   });
 

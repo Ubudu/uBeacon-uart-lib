@@ -58,6 +58,12 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       });
     },
     function(callback){
+      ubeacon.getFirmwareBuild( function( buildId, error ){
+        console.log( '[ubeacon] Received firmware build' , buildId );
+        callback(error);
+      });
+    },
+    function(callback){
       ubeacon.getHardwareModel( function( model, error ){
         console.log( '[ubeacon] Received hardware model' , model );
         callback(error);
@@ -72,6 +78,12 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     function(callback){
       ubeacon.getMacAddress( function( address, error ){
         console.log( '[ubeacon] Received macAddress' , address );
+        callback(error);
+      });
+    },
+    function(callback){
+      ubeacon.getTemperature( function( temperature, error ){
+        console.log( '[ubeacon] Received temperature' , temperature );
         callback(error);
       });
     },
@@ -95,13 +107,7 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     },
     function(callback){
       ubeacon.getRTCTime( function( BCDDate, error ){
-        console.log( '[ubeacon] Received RTC bcd' , BCDDate );
-        callback(error);
-      });
-    },
-    function(callback){
-      ubeacon.getOpenDaySchedule( function( openDaySchedule, error ) {
-        console.log( '[ubeacon] Received open day schedule', openDaySchedule );
+        console.log( '[ubeacon] Received RTC date' , BCDDate );
         callback(error);
       });
     },
@@ -133,6 +139,24 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     function(callback){
       ubeacon.getMinor( function( minor, error ){
         console.log( '[ubeacon] Received minor' , minor );
+        callback(error);
+      });
+    },
+    function(callback){
+      ubeacon.getMeshSettingsRegisterObject( function( settings, error ){
+        console.log( '[ubeacon] Mesh settings', settings);
+        callback(error);
+      });
+    },
+    function(callback){
+      ubeacon.getMeshDeviceId( function( deviceId, error ){
+        console.log( '[ubeacon] Mesh deviceId', deviceId);
+        callback(error);        
+      });
+    },
+    function(callback){
+      ubeacon.getMeshStats( function( stats, error ){
+        console.log( '[ubeacon] Mesh stats', stats);
         callback(error);
       });
     },

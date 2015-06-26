@@ -73,6 +73,7 @@ function UBeaconUARTController( serialPort , baudRate )
     hardwareModel:          0x32,   //'2'
     hardwareVersion:        0x33,   //'3'
     bdaddr:                 0x34,   //'4'
+    firmwareBuild:          0x36,   //'6'
     serialNumber:           0x37,   //'7'
     connectable:            0x75,   //'u'
     connectionInfo:         0x79,   //'y'
@@ -80,6 +81,7 @@ function UBeaconUARTController( serialPort , baudRate )
     uartSettingsRegister:   0x6f,   //'o'
     txPower:                0x35,   //'5'
     batteryLevel:           0x38,   //'8'
+    temperature:            0x64,   //'d' 
     RTCAlarmEnabled:        0x6b,   //'k'
     RTCSettingsRegister:    0x6a,   //'j'
     RTCTime:                0x77,   //'w'
@@ -96,6 +98,7 @@ function UBeaconUARTController( serialPort , baudRate )
     meshSettingsRegister:   0x6d,   //'m'
     meshNetworkUUID:        0x78,   //'x'
     meshDeviceId:           0x7a,   //'z'
+    meshStats:              0x73,   //'s'
 
     eventReady:             0x21,   //'!'
     eventConnected:         0x40,   //'@'
@@ -233,6 +236,14 @@ UBeaconUARTController.prototype.getMacAddress = function( callback )
 /**
  *
  */
+UBeaconUARTController.prototype.getFirmwareBuild = function( callback )
+{
+  this.sendGetCommand(this.uartCmd.firmwareBuild, null, callback);
+};
+
+/**
+ *
+ */
 UBeaconUARTController.prototype.getConnectionInfo = function( callback )
 {
   this.sendGetCommand(this.uartCmd.connectionInfo, null, callback);
@@ -292,6 +303,20 @@ UBeaconUARTController.prototype.getSerialNumber = function( callback )
 UBeaconUARTController.prototype.getBatteryLevel = function( callback )
 {
   this.sendGetCommand(this.uartCmd.batteryLevel, null, callback);
+};
+
+
+/**
+ *
+ * Get temperature
+ *
+ * @param function    function( responseData ) - will be called 
+ *                    when data is received from uBeacon
+ *
+ */
+UBeaconUARTController.prototype.getTemperature = function( callback )
+{
+  this.sendGetCommand(this.uartCmd.temperature, null, callback);
 };
 
 
@@ -602,7 +627,9 @@ UBeaconUARTController.prototype.getMeshSettingsRegister = function( callback )
   this.sendGetCommand(this.uartCmd.meshSettingsRegister, null, callback);
 };
 
-
+/**
+ *
+ */
 UBeaconUARTController.prototype.setMeshSettingsRegisterObject = function( meshSettingsRegister , callback )
 {
   var _callback = function( data , error ){
@@ -619,6 +646,9 @@ UBeaconUARTController.prototype.setMeshSettingsRegisterObject = function( meshSe
   this.setMeshSettingsRegister( hexStr.substr(0,2) , hexStr.substr(2,2) , _callback );
 };
 
+/**
+ *
+ */
 UBeaconUARTController.prototype.getMeshSettingsRegisterObject = function( callback )
 {
   var _callback = function( data, error ){
@@ -669,6 +699,15 @@ UBeaconUARTController.prototype.setMeshDeviceId = function( meshDeviceId, callba
 UBeaconUARTController.prototype.getMeshDeviceId = function( callback )
 {
   this.sendGetCommand(this.uartCmd.meshDeviceId, null, callback);
+};
+
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.getMeshStats = function( callback )
+{
+  this.sendGetCommand(this.uartCmd.meshStats, null, callback);
 };
 
 
@@ -857,6 +896,9 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
     case this.uartCmd.bdaddr:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
+    case this.uartCmd.firmwareBuild:
+      responseData = this.parseGeneralStringResponse( cmdByte, data );
+      break;
     case this.uartCmd.connectable:
       responseData = this.parseConnectableResponse( cmdByte, data );
       break;
@@ -870,13 +912,13 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = this.parseConnectionInfoResponse( cmdByte, data );
       break;
     case this.uartCmd.txPower:
-      responseData = this.parseTXPowerResponse( cmdByte, data );
+      responseData = this.parseUint8( cmdByte, data );
       break;
     case this.uartCmd.serialNumber:
       responseData = this.parseGeneralStringResponse( cmdByte , data );
       break;
     case this.uartCmd.batteryLevel: 
-      responseData = this.parseBatteryLevelResponse( cmdByte , data );
+      responseData = this.parseUint8( cmdByte , data );
       break;
     case this.uartCmd.temperature:
       responseData = this.parseTemperatureResponse( cmdByte, data );
@@ -900,10 +942,10 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = this.parseHexStringResponse( cmdByte, data );
       break;
     case this.uartCmd.major:
-      responseData = data;
+      responseData = this.parseUint16( cmdByte, data );
       break;
     case this.uartCmd.minor:
-      responseData = data;
+      responseData = this.parseUint16( cmdByte, data );
       break;
     case this.uartCmd.measuredStrength:
       responseData = data;
@@ -921,7 +963,10 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = this.parseHexStringResponse( cmdByte, data );
       break;
     case this.uartCmd.meshDeviceId:
-      responseData = data;
+      responseData = this.parseUint16( cmdByte, data );
+      break;
+    case this.uartCmd.meshStats:
+      responseData = this.parseMeshStats( cmdByte, data );
       break;
     case this.uartCmd.none:       
       responseData = data;
@@ -990,26 +1035,31 @@ UBeaconUARTController.prototype.parseGeneralStringResponse = function( cmdByte ,
   return rawData;
 };
 
+UBeaconUARTController.prototype.parseUint8 = function( cmdByte , responseData )
+{
+  return parseInt(responseData,16);
+};
 
 /**
  *
  */
-UBeaconUARTController.prototype.parseTXPowerResponse = function( cmdByte, responseData )
+UBeaconUARTController.prototype.parseUint16 = function( cmdByte , responseData )
 {
-  var txPower = parseInt( responseData.substring(0,2) , 16 );
-  return txPower;
+  return parseInt(responseData,16);
 };
-
 
 /**
- * Parse battery info response
+ *
  */
-UBeaconUARTController.prototype.parseBatteryLevelResponse = function( cmdByte, responseData )
+UBeaconUARTController.prototype.parseTemperatureResponse = function( cmdByte, responseData )
 {
-  var batteryLevel = parseInt(responseData,16);
-  return batteryLevel;
+  var temperature = parseInt(responseData, 16);
+  // <0 is represented on uint16 so -1 is 0xFFFE
+  if( temperature >= 0x8000 ){
+    temperature = temperature - 0xFFFF;
+  }
+  return temperature;
 };
-
 
 /**
  * Parse RTC time info provided from DS1337
@@ -1067,7 +1117,7 @@ UBeaconUARTController.prototype.parseConnectionInfoResponse = function( cmdByte,
     retVal.macAddress = responseData.substr(2,10);
   }
   return retVal;
-}
+};
 
 /**
  *
@@ -1078,6 +1128,15 @@ UBeaconUARTController.prototype.parseAdvertisingIntervalResponse = function( cmd
   return interval;
 };
 
+/**
+ *
+ */
+UBeaconUARTController.prototype.parseMeshStats = function( cmdByte, responseData )
+{
+  var stats = new UBeaconMeshStats();
+  stats.setFromBytes( responseData );
+  return stats;
+};
 //////////////////////////////////////////////////////////////////////////////
 // Event parsing functions
 //////////////////////////////////////////////////////////////////////////////
@@ -1393,12 +1452,21 @@ UBeaconMeshSettingsRegister.prototype.setFromBytes = function( bytesHexString )
   var byte0 = parseInt(bytesHexString.substr(0,2), 16);
   var byte1 = parseInt(bytesHexString.substr(2,2), 16);
 
-  this.enabled = ( byte0 & (1<<0) ) != 0;
-  this.allow_non_auth_connections = ( byte0 & (1<<1) ) != 0;
-  this.always_connectable = ( byte0 & (1<<2) ) != 0;
-  this.enable_mesh_window = ( byte0 & (1<<3) ) != 0;
-  this.mesh_window_on_hour = ( byte1 & 0x1f );
-  this.mesh_window_duration = ((byte1 & 0xe0 ) >> 5) * 10;
+  if( byte0 === 0xFF && byte1 === 0xFF ){
+    this.enabled = false;
+    this.allow_non_auth_connections = false;
+    this.always_connectable = false;
+    this.enable_mesh_window = false;
+    this.mesh_window_on_hour = 0;
+    this.mesh_window_duration = 0;    
+  }else{
+    this.enabled = ( byte0 & (1<<0) ) !== 0;
+    this.allow_non_auth_connections = ( byte0 & (1<<1) ) !== 0;
+    this.always_connectable = ( byte0 & (1<<2) ) !== 0;
+    this.enable_mesh_window = ( byte0 & (1<<3) ) !== 0;
+    this.mesh_window_on_hour = ( byte1 & 0x1f );
+    this.mesh_window_duration = ((byte1 & 0xe0 ) >> 5) * 10;
+  }
 };
 
 /**
@@ -1460,4 +1528,30 @@ UBeaconMeshSettingsRegister.prototype.getBytes = function()
   retVal += dataUtils.zeroPad((byte0).toString(16),2);
   retVal += dataUtils.zeroPad((byte1).toString(16),2);
   return retVal;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// Mesh stats object
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ *
+ */
+function UBeaconMeshStats()
+{
+  this.sent = 0;
+  this.acked = 0;
+  this.received = 0;
+}
+
+/**
+ *
+ */ 
+UBeaconMeshStats.prototype.setFromBytes = function( bytesHexString )
+{
+  if( bytesHexString.length == 12 ){
+    this.sent = parseInt(bytesHexString.substr(0,4), 16);
+    this.acked = parseInt(bytesHexString.substr(4,4), 16);
+    this.received = parseInt(bytesHexString.substr(8,4), 16);
+  }
 };
