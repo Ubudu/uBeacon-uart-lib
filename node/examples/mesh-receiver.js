@@ -62,7 +62,7 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     //Get device address and print it
     function(callback){
       ubeacon.getMeshDeviceId( function( deviceAddress ){
-        console.log( 'Device address is: ', parseInt(deviceAddress,16) + ' (0x' + deviceAddress + ')' );
+        console.log( 'Device address is: ' + deviceAddress + ' (0x' + deviceAddress.toString(16) + ')' );
         callback(null);
       });
     },
