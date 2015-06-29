@@ -33,8 +33,8 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
         if( error === null ){
           meshSettings.setFrom( data );
           console.log( 'meshSettings: ', meshSettings );
-          if( meshSettings.enabled === false && program.enableMesh === false ){
-            return callback(new Error('Mesh is disabled on device. Enable it before running. '))
+          if( meshSettings.enabled !== true && program.enableMesh !== true ){
+            return callback(new Error('Mesh is disabled on device. Enable it by adding `--enable-mesh` parameter.'));
           }
           return callback(null);
         }else{
@@ -45,7 +45,7 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
 
     //Try to enable mesh if launch parameter has been specified
     function(callback){
-      if( meshSettings.enabled === false && program.enableMesh === true ){
+      if( meshSettings.enabled !== true && program.enableMesh === true ){
         console.log( 'Mesh disabled on device. Enabling.' );
         meshSettings.enabled = true;
         ubeacon.setMeshSettingsRegisterObject( meshSettings, function(data, error){
