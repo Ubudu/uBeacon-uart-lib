@@ -1318,7 +1318,7 @@ UBeaconUARTController.prototype.dateToBCDDate = function( date )
     dataUtils.number2bcd(date.getHours()),
     dataUtils.number2bcd(1+(date.getDay()%7)),
     dataUtils.number2bcd(date.getDate()),
-    dataUtils.number2bcd(1+date.getMonth()+1),  //+1 since JS counts months from 0 and RTCChip from 1
+    dataUtils.number2bcd(1+date.getMonth()),  //+1 since JS counts months from 0 and RTCChip from 1
     dataUtils.number2bcd(date.getFullYear()-2000)
   ];
 
