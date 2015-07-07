@@ -58,12 +58,6 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       });
     },
     function(callback){
-      ubeacon.getFirmwareBuild( function( buildId, error ){
-        console.log( '[ubeacon] Received firmware build' , buildId );
-        callback(error);
-      });
-    },
-    function(callback){
       ubeacon.getHardwareModel( function( model, error ){
         console.log( '[ubeacon] Received hardware model' , model );
         callback(error);
