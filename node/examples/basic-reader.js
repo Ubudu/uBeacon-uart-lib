@@ -76,12 +76,6 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       });
     },
     function(callback){
-      ubeacon.getTemperature( function( temperature, error ){
-        console.log( '[ubeacon] Received temperature' , temperature );
-        callback(error);
-      });
-    },
-    function(callback){
       ubeacon.getTXPower( function( txPower, error ){
         console.log( '[ubeacon] Received txPower' , txPower );
         callback(error);
