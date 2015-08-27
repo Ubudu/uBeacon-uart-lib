@@ -3,6 +3,7 @@
 
 var serialport = require("serialport");
 var SerialPort = serialport.SerialPort;
+var async = require('async');
 
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
@@ -67,46 +68,59 @@ function UBeaconUARTController( serialPort , baudRate )
   //Available commands
   this.uartCmd = {
 
-    none:                   0xFF,   //
-    protocolVersion:        0x30,   //'0'
-    firmwareVersion:        0x31,   //'1'
-    hardwareModel:          0x32,   //'2'
-    hardwareVersion:        0x33,   //'3'
-    bdaddr:                 0x34,   //'4'
-    firmwareBuild:          0x36,   //'6'
-    serialNumber:           0x37,   //'7'
-    connectable:            0x75,   //'u'
-    connectionInfo:         0x79,   //'y'
-    ledSettingsRegister:    0x6c,   //'l'
-    uartSettingsRegister:   0x6f,   //'o'
-    txPower:                0x35,   //'5'
-    batteryLevel:           0x38,   //'8'
-    temperature:            0x64,   //'d' 
-    RTCAlarmEnabled:        0x6b,   //'k'
-    RTCSettingsRegister:    0x6a,   //'j'
-    RTCTime:                0x77,   //'w'
-    RTCSchedule:            0x72,   //'r'
-    advertising:            0x74,   //'t'
-    advertisingInterval:    0x69,   //'i'
-    uuid:                   0x61,   //'a'
-    major:                  0x66,   //'f'
-    minor:                  0x67,   //'g'
-    measuredStrength:       0x76,   //'v'
-    serviceId:              0x62,   //'b'
-    led:                    0x68,   //'h'
-    command:                0x63,   //'l'
-    meshSettingsRegister:   0x6d,   //'m'
-    meshNetworkUUID:        0x78,   //'x'
-    meshDeviceId:           0x7a,   //'z'
-    meshStats:              0x73,   //'s'
+    //{cmd: coommandByte, availability: versionOfUartProtocol}
+    //If versionOfUartProtocol is null then it is available for all versions and devices
+    none:                   {cmd:0xFF,availability:'0.0.0'},   //
+    protocolVersion:        {cmd:0x30,availability:null},   //'0'
+    firmwareVersion:        {cmd:0x31,availability:null},   //'1'
+    hardwareModel:          {cmd:0x32,availability:null},   //'2'
+    hardwareVersion:        {cmd:0x33,availability:null},   //'3'
+    bdaddr:                 {cmd:0x34,availability:null},   //'4'
+    firmwareBuild:          {cmd:0x36,availability:'0.2.0'},   //'6'
+    serialNumber:           {cmd:0x37,availability:null},   //'7'
+    connectable:            {cmd:0x75,availability:'0.1.0'},   //'u'
+    connectionInfo:         {cmd:0x79,availability:'0.1.1'},   //'y'
+    ledSettingsRegister:    {cmd:0x6c,availability:'0.1.0'},   //'l'
+    uartSettingsRegister:   {cmd:0x6f,availability:'0.1.0'},   //'o'
+    txPower:                {cmd:0x35,availability:'0.1.0'},   //'5'
+    batteryLevel:           {cmd:0x38,availability:'0.1.0'},   //'8'
+    temperature:            {cmd:0x64,availability:'0.2.0'},   //'d' 
+    RTCAlarmEnabled:        {cmd:0x6b,availability:'0.1.0'},   //'k'
+    RTCSettingsRegister:    {cmd:0x6a,availability:'0.1.0'},   //'j'
+    RTCTime:                {cmd:0x77,availability:'0.1.0'},   //'w'
+    RTCSchedule:            {cmd:0x72,availability:'0.1.0'},   //'r'
+    advertising:            {cmd:0x74,availability:'0.1.0'},   //'t'
+    advertisingInterval:    {cmd:0x69,availability:'0.1.0'},   //'i'
+    advertisingSettings:    {cmd:0x70,availability:'0.2.1'},   //'p'
+    uuid:                   {cmd:0x61,availability:'0.1.0'},   //'a'
+    major:                  {cmd:0x66,availability:'0.1.0'},   //'f'
+    minor:                  {cmd:0x67,availability:'0.1.0'},   //'g'
+    eddystoneURL:           {cmd:0x65,availability:'0.2.1'},   //'e'
+    measuredStrength:       {cmd:0x76,availability:'0.1.0'},   //'v'
+    serviceId:              {cmd:0x62,availability:'0.1.0'},   //'b'
+    led:                    {cmd:0x68,availability:'0.1.2'},   //'h'
+    command:                {cmd:0x63,availability:'0.1.0'},   //'l'
+    meshSettingsRegister:   {cmd:0x6d,availability:'0.1.0'},   //'m'
+    meshNetworkUUID:        {cmd:0x78,availability:'0.1.0'},   //'x'
+    meshDeviceId:           {cmd:0x7a,availability:'0.1.0'},   //'z'
+    meshStats:              {cmd:0x73,availability:'0.1.0'},   //'s'
 
-    eventReady:             0x21,   //'!'
-    eventConnected:         0x40,   //'@'
-    eventButton:            0x24,   //'$'
-    eventMeshMessage:       0x5e,   //'^'
-    eventDfuError:          0x2a,   //'*'
-    eventDfuWritten:        0x23,   //'#'
+    eventReady:             {cmd:0x21,availability:'0.1.0'},   //'!'
+    eventConnected:         {cmd:0x40,availability:'0.1.1'},   //'@'
+    eventButton:            {cmd:0x24,availability:'0.1.0'},   //'$'
+    eventMeshMessage:       {cmd:0x5e,availability:'0.1.0'},   //'^'
+    eventDfuError:          {cmd:0x2a,availability:'0.2.0'},   //'*'
+    eventDfuWritten:        {cmd:0x23,availability:'0.2.0'},   //'#'
   };
+
+  //Basic data of the connected device
+  this.deviceData = {
+    hardwareModel: null,
+    hardwareVersion: null,
+    firmwareVersion: null,
+    uartProtocolVersion: null
+  };
+
 
   if( serialPort != null ){
     this.serialPort = new SerialPort( serialPort, { 
@@ -132,8 +146,16 @@ function UBeaconUARTController( serialPort , baudRate )
         }
       });
       
-      self.ready = true;
-      self.emit( self.EVENTS.UART_READY );
+      //discover basic device info 
+      self.discoverBasicDeviceData( function(data, error){
+        if( error === null ){
+          self.ready = true;
+          self.emit( self.EVENTS.UART_READY );
+        }else{
+          self.emit( self.EVENTS.ERROR, error );
+        }
+      });
+
       
     });
   }
@@ -162,6 +184,53 @@ UBeaconUARTController.prototype.setUARTRawInputLoggingEnabled = function(enabled
 UBeaconUARTController.prototype.setUARTLoggingEnabled = function(enabled)
 {
   uartLoggingEnabled = enabled;
+};
+
+/**
+ * Discovers basic information regarding the connected device
+ */
+UBeaconUARTController.prototype.discoverBasicDeviceData = function(callback)
+{
+  var self = this;
+
+  async.waterfall([
+    //Get uart protocol version
+    function(finishedCallback){
+      self.getUARTProtocolVersion(function(data,error){
+        self.deviceData.uartProtocolVersion = data;
+        finishedCallback(error);
+      });
+    },
+    //Get hardware model
+    function(finishedCallback){
+      self.getHardwareModel(function(data,error){
+        self.deviceData.hardwareModel = data;
+        finishedCallback(error);
+      });
+    },
+    //Get hardware version
+    function(finishedCallback){
+      self.getHardwareVersion(function(data,error){
+        self.deviceData.hardwareVersion = data;
+        finishedCallback(error);
+      });
+    },
+    //Get firmware version
+    function(finishedCallback){
+      self.getFirmwareVersion(function(data,error){
+        self.deviceData.firmwareVersion = data;
+        finishedCallback(error);
+      });
+    },
+  ], function(error, result){
+    if( callback != null ){
+      if( error != null ){
+        return callback(null, error);
+      }else{
+        return callback(self.deviceData, null);
+      }
+    }
+  });
 };
 
 /**
@@ -790,15 +859,28 @@ UBeaconUARTController.prototype.getCommandString = function( isGet, cmdByte, dat
 /**
  *
  */
-UBeaconUARTController.prototype.sendCommand = function( isGet, cmdByte, data, callback, expectResponse )
+UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, callback, expectResponse )
 {
-  var cmdBuffer = this.getCommandString( isGet, cmdByte, data );
+  //Check if command is supported in current UART protocol? If not throw an error
+  console.log( cmdObject.cmd , this.uartCmd.protocolVersion.cmd );
+  if( cmdObject.availability != null ){
+    if( dataUtils.versionGreaterThanOrEqual(this.deviceData.uartProtocolVersion, cmdObject.availability) === false ){
+      console.log('sendCommand, not supported');
+      var msg = 'Command 0x' + dataUtils.uint8ToHex(cmdObject.cmd) + ' is not available for protocol version: ' + this.deviceData.uartProtocolVersion;
+      msg += ' Support has been added in ' + cmdObject.availability;
+      var error = new Error(msg);
+      return callback(null, error);
+    }
+  }
+
+
+  var cmdBuffer = this.getCommandString( isGet, cmdObject.cmd, data );
   if( uartLoggingEnabled ){
     console.log( '[UART>>] sending' , cmdBuffer.toString() , '( '+ cmdBuffer +' )');
   }
-  this.removeOldCallbacks(cmdByte);
+  this.removeOldCallbacks(cmdObject.cmd);
   var cb = {
-    cmd: cmdByte, 
+    cmd: cmdObject.cmd, 
     cmdBuffer: cmdBuffer, 
     callback: callback, 
     timestamp: new Date(), 
@@ -812,17 +894,17 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdByte, data, ca
   //
   var self = this;
   cb.timeout = setTimeout(function(){
-    var e = new Error('Receving response for cmd=0x' + dataUtils.uint8ToHex(cmdByte) + ' timed out. Is UART enabled on the board and is the board connected?');
-    if( self._callbacks[cmdByte] != null ){
-      var cb = self._callbacks[cmdByte].callback;
-      self.removeOldCallbacks(cmdByte);
+    var e = new Error('Receving response for cmd=0x' + dataUtils.uint8ToHex(cmdObject.cmd) + ' timed out. Is UART enabled on the board and is the board connected?');
+    if( self._callbacks[cmdObject.cmd] != null ){
+      var cb = self._callbacks[cmdObject.cmd].callback;
+      self.removeOldCallbacks(cmdObject.cmd);
       if( cb != null ){
         return cb(null, e);
       }
     }
   }, self._timeoutMs);
 
-  this._callbacks[cmdByte] = cb;
+  this._callbacks[cmdObject.cmd] = cb;
   this.writeRaw(cmdBuffer);
 };
 
@@ -856,13 +938,12 @@ UBeaconUARTController.prototype.parseIncomingSerialData = function( serialDataBu
     var data = serialDataBuffer.substr(3);
 
     //Handle events and commands differently
-    if( cmdByte === this.uartCmd.eventReady || 
-        cmdByte === this.uartCmd.eventButton || 
-        cmdByte === this.uartCmd.eventMeshMessage || 
-        cmdByte === this.uartCmd.eventMessage || 
-        cmdByte === this.uartCmd.eventConnected || 
-        cmdByte === this.uartCmd.eventDfuError || 
-        cmdByte === this.uartCmd.eventDfuWritten ){
+    if( cmdByte === this.uartCmd.eventReady.cmd || 
+        cmdByte === this.uartCmd.eventButton.cmd || 
+        cmdByte === this.uartCmd.eventMeshMessage.cmd || 
+        cmdByte === this.uartCmd.eventConnected.cmd || 
+        cmdByte === this.uartCmd.eventDfuError.cmd || 
+        cmdByte === this.uartCmd.eventDfuWritten.cmd ){
       this.executeIncomingEventData( cmdByte, data );
     }else{
       var responseData = this.convertIncomingResponseData( cmdByte, data );
@@ -881,94 +962,100 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
   var responseData = null;
   switch(cmdByte){
     //Commands response parsing
-    case this.uartCmd.protocolVersion:
+    case this.uartCmd.protocolVersion.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.firmwareVersion:
+    case this.uartCmd.firmwareVersion.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.hardwareModel:
+    case this.uartCmd.hardwareModel.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.hardwareVersion:
+    case this.uartCmd.hardwareVersion.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.bdaddr:
+    case this.uartCmd.bdaddr.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.firmwareBuild:
+    case this.uartCmd.firmwareBuild.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.connectable:
+    case this.uartCmd.connectable.cmd:
       responseData = this.parseConnectableResponse( cmdByte, data );
       break;
-    case this.uartCmd.ledSettingsRegister:
+    case this.uartCmd.ledSettingsRegister.cmd:
       responseData = data;
       break;
-    case this.uartCmd.uartSettingsRegister:
+    case this.uartCmd.uartSettingsRegister.cmd:
       responseData = data;
       break;
-    case this.uartCmd.connectionInfo:
+    case this.uartCmd.connectionInfo.cmd:
       responseData = this.parseConnectionInfoResponse( cmdByte, data );
       break;
-    case this.uartCmd.txPower:
+    case this.uartCmd.txPower.cmd:
       responseData = this.parseUint8( cmdByte, data );
       break;
-    case this.uartCmd.serialNumber:
+    case this.uartCmd.serialNumber.cmd:
       responseData = this.parseGeneralStringResponse( cmdByte , data );
       break;
-    case this.uartCmd.batteryLevel: 
+    case this.uartCmd.batteryLevel.cmd: 
       responseData = this.parseUint8( cmdByte , data );
       break;
-    case this.uartCmd.temperature:
+    case this.uartCmd.temperature.cmd:
       responseData = this.parseTemperatureResponse( cmdByte, data );
       break;
-    case this.uartCmd.RTCSettingsRegister:
+    case this.uartCmd.RTCSettingsRegister.cmd:
       responseData = data;
       break;
-    case this.uartCmd.RTCTime:  
+    case this.uartCmd.RTCTime.cmd:  
       responseData = this.parseRTCDataResponse( cmdByte , data );
       break;
-    case this.uartCmd.RTCSchedule:
+    case this.uartCmd.RTCSchedule.cmd:
       responseData = this.parseRTCScheduleResponse( cmdByte , data );
       break;
-    case this.uartCmd.advertising:
+    case this.uartCmd.advertising.cmd:
       responseData = this.parseHexStringResponse( cmdByte , data );
       break;
-    case this.uartCmd.advertisingInterval:
+    case this.uartCmd.advertisingInterval.cmd:
       responseData = this.parseAdvertisingIntervalResponse( cmdByte, data );
       break;
-    case this.uartCmd.uuid:
+    case this.uartCmd.advertisingSettings.cmd:
+      throw( 'Not implemented' );
+
+    case this.uartCmd.uuid.cmd:
       responseData = this.parseHexStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.major:
+    case this.uartCmd.major.cmd:
       responseData = this.parseUint16( cmdByte, data );
       break;
-    case this.uartCmd.minor:
+    case this.uartCmd.minor.cmd:
       responseData = this.parseUint16( cmdByte, data );
       break;
-    case this.uartCmd.measuredStrength:
+    case this.uartCmd.eddystoneURL.cmd:
+      throw( 'Not implemented' );
+
+    case this.uartCmd.measuredStrength.cmd:
       responseData = data;
       break;
-    case this.uartCmd.led:
+    case this.uartCmd.led.cmd:
       responseData = this.parseHexStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.command:
+    case this.uartCmd.command.cmd:
       //No response for reset should ever be received
       break;
-    case this.uartCmd.meshSettingsRegister:  
+    case this.uartCmd.meshSettingsRegister.cmd:  
       responseData = data;
       break;
-    case this.uartCmd.meshNetworkUUID:
+    case this.uartCmd.meshNetworkUUID.cmd:
       responseData = this.parseHexStringResponse( cmdByte, data );
       break;
-    case this.uartCmd.meshDeviceId:
+    case this.uartCmd.meshDeviceId.cmd:
       responseData = this.parseUint16( cmdByte, data );
       break;
-    case this.uartCmd.meshStats:
+    case this.uartCmd.meshStats.cmd:
       responseData = this.parseMeshStats( cmdByte, data );
       break;
-    case this.uartCmd.none:       
+    case this.uartCmd.none.cmd:       
       responseData = data;
       break;
     default:
@@ -995,9 +1082,6 @@ UBeaconUARTController.prototype.executeIncomingEventData = function( eventByte, 
       break;
     case this.uartCmd.eventMeshMessage:
       this.executeMeshEventMessage( eventByte, data );
-      break;
-    case this.uartCmd.eventMessage:
-      this.executeMessageEventMessage( eventByte, data );
       break;
     case this.uartCmd.eventConnected:
       this.executeConnectedEventMessage( eventByte, data );

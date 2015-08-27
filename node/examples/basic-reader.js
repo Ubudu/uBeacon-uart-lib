@@ -172,6 +172,11 @@ ubeacon.on(ubeacon.EVENTS.UBEACON_READY, function(isReady){
   console.log('UBEACON_READY');
 });
 
+ubeacon.on(ubeacon.EVENTS.ERROR, function(error){
+  console.log('UBEACON_ERROR', error);
+});
+
+
 ubeacon.on(ubeacon.EVENTS.CONNECTED, function(isConnected, macAddress){
   console.log('CONNECTED::', 'isConnected: ', isConnected, 'macAddress: ', macAddress);
 });

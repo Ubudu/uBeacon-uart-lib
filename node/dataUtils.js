@@ -82,6 +82,43 @@ module.exports = {
   {
     var zero = places - num.toString().length + 1;
     return Array(+(zero > 0 && zero)).join('0') + num;
+  },
+
+
+  /**
+   *
+   */
+  versionGreaterThanOrEqual: function( inputVersion, compareVersion )
+  {
+    if( inputVersion == null || compareVersion == null ){
+      return false;
+    }
+
+    var tmpIn = inputVersion.split('.');
+    var tmpCmp = compareVersion.split('.');
+
+    var inVersion = {
+      major: parseInt(tmpIn[0]),
+      minor: parseInt(tmpIn[1]),
+      patch: parseInt(tmpIn[2]),
+    };
+    var cmpVersion = {
+      major: parseInt(tmpCmp[0]),
+      minor: parseInt(tmpCmp[1]),
+      patch: parseInt(tmpCmp[2]),
+    };
+
+    if( inVersion.major > cmpVersion.major ){
+      return true;
+    }
+    if( inVersion.major == cmpVersion.major && inVersion.minor > cmpVersion.minor ){
+      return true;
+    }
+    if( inVersion.major == cmpVersion.major && inVersion.minor == cmpVersion.minor && inVersion.patch >= cmpVersion.patch ){
+      return true;
+    }
+    return false;
   }
+
 
 };
