@@ -29,13 +29,13 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     },
     //Build LED-on message and send it
     function(callback){
-      var msg = ubeacon.getCommandString( false, ubeacon.uartCmd.led, new Buffer('03','hex') );
+      var msg = ubeacon.getCommandString( false, ubeacon.uartCmd.led, new Buffer('03','hex') , false );
       ubeacon.sendMeshRemoteManagementMessage( program.destinationAddress, msg.toString(), null);
       setTimeout(callback, 2000);
     },
     //Build LED-off message and send it
     function(callback){
-      var msg = ubeacon.getCommandString( false, ubeacon.uartCmd.led, new Buffer('00','hex') );
+      var msg = ubeacon.getCommandString( false, ubeacon.uartCmd.led, new Buffer('00','hex') , false );
       ubeacon.sendMeshRemoteManagementMessage( program.destinationAddress, msg.toString(), null);
       setTimeout(callback, 2000);
     },

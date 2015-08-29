@@ -841,7 +841,7 @@ UBeaconUARTController.prototype.sendSetCommand = function( cmdByte, data, callba
 /**
  *
  */
-UBeaconUARTController.prototype.getCommandString = function( isGet, cmdByte, data )
+UBeaconUARTController.prototype.getCommandString = function( isGet, cmdByte, data , appendEndline )
 {
   var commandTypeByte = this.cmdSetPrefixByte;
   if( isGet ){
@@ -852,7 +852,9 @@ UBeaconUARTController.prototype.getCommandString = function( isGet, cmdByte, dat
   if( data != null ){
     cmdBuffer = Buffer.concat( [cmdBuffer, data] );
   }
-  cmdBuffer = Buffer.concat( [cmdBuffer, new Buffer([0x0D, 0x0A])] );
+  if( appendEndline ){
+    cmdBuffer = Buffer.concat( [cmdBuffer, new Buffer([0x0D, 0x0A])] );
+  }
   return cmdBuffer;
 };
 
@@ -874,7 +876,7 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, 
   }
 
 
-  var cmdBuffer = this.getCommandString( isGet, cmdObject.cmd, data );
+  var cmdBuffer = this.getCommandString( isGet, cmdByte, data , true );
   if( uartLoggingEnabled ){
     console.log( '[UART>>] sending' , cmdBuffer.toString() , '( '+ cmdBuffer +' )');
   }
