@@ -864,7 +864,7 @@ UBeaconUARTController.prototype.getCommandString = function( isGet, cmdByte, dat
 UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, callback, expectResponse )
 {
   //Check if command is supported in current UART protocol? If not throw an error
-  console.log( cmdObject.cmd , this.uartCmd.protocolVersion.cmd );
+  // console.log( cmdObject.cmd , this.uartCmd.protocolVersion.cmd );
   if( cmdObject.availability != null ){
     if( dataUtils.versionGreaterThanOrEqual(this.deviceData.uartProtocolVersion, cmdObject.availability) === false ){
       console.log('sendCommand, not supported');
@@ -876,7 +876,7 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, 
   }
 
 
-  var cmdBuffer = this.getCommandString( isGet, cmdByte, data , true );
+  var cmdBuffer = this.getCommandString( isGet, cmdObject.cmd, data , true );
   if( uartLoggingEnabled ){
     console.log( '[UART>>] sending' , cmdBuffer.toString() , '( '+ cmdBuffer +' )');
   }
@@ -1076,22 +1076,22 @@ UBeaconUARTController.prototype.executeIncomingEventData = function( eventByte, 
 {
   switch(eventByte){
     //Events
-    case this.uartCmd.eventReady:
+    case this.uartCmd.eventReady.cmd:
       this.executeReadyEventMessage( eventByte, data );
       break;  
-    case this.uartCmd.eventButton:
+    case this.uartCmd.eventButton.cmd:
       this.executeButtonEventMessage( eventByte, data );
       break;
-    case this.uartCmd.eventMeshMessage:
+    case this.uartCmd.eventMeshMessage.cmd:
       this.executeMeshEventMessage( eventByte, data );
       break;
-    case this.uartCmd.eventConnected:
+    case this.uartCmd.eventConnected.cmd:
       this.executeConnectedEventMessage( eventByte, data );
       break;
-    case this.uartCmd.eventDfuError:
+    case this.uartCmd.eventDfuError.cmd:
       this.executeDFUErrorEventMessage( eventByte, data );
       break;
-    case this.uartCmd.eventDfuWritten:
+    case this.uartCmd.eventDfuWritten.cmd:
       this.executeDFUWrittenEventMessage( eventByte, data );
       break;
   }
