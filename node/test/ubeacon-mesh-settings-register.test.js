@@ -5,7 +5,9 @@ var expect = require('chai').expect;
 
 var UBeaconMeshSettingsRegister = require('../uBeaconUARTController.js').UBeaconMeshSettingsRegister;
 
-
+/*
+ * Testing UBeaconMeshSettings register value conversions
+ */
 
 describe('UBeaconMeshSettingsRegister data conversions', function(){
   

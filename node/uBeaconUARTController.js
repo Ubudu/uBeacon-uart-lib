@@ -4,6 +4,7 @@
 var serialport = require("serialport");
 var SerialPort = serialport.SerialPort;
 var async = require('async');
+var eddystoneEncoder = require('eddystone-url-encoding');
 
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
@@ -14,6 +15,7 @@ util.inherits(UBeaconUARTController, EventEmitter);
 
 
 module.exports.UBeaconUARTController = UBeaconUARTController;
+module.exports.UBeaconAdvertisingSettingsRegister = UBeaconAdvertisingSettingsRegister;
 module.exports.UBeaconMeshSettingsRegister = UBeaconMeshSettingsRegister;
 
 var uartLoggingEnabled = false;
@@ -568,6 +570,21 @@ UBeaconUARTController.prototype.getAdvertisingInterval = function( callback )
   this.sendGetCommand(this.uartCmd.advertisingInterval, null, callback);
 };
 
+/**
+ *
+ */
+UBeaconUARTController.prototype.setAdvertisingSettings = function( advertisingSettings, callback )
+{
+  this.sendSetCommand(this.uartCmd.advertisingSettings, new Buffer( advertisingSettings.getBytes() ), callback);
+};
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.getAdvertisingSettings = function( callback )
+{
+  this.sendGetCommand(this.uartCmd.advertisingSettings, null, callback);
+};
 
 /**
  *
@@ -624,6 +641,52 @@ UBeaconUARTController.prototype.setMinor = function( minor, callback )
 UBeaconUARTController.prototype.getMinor = function( callback )
 {
   this.sendGetCommand(this.uartCmd.minor, null, callback);
+};
+
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.getEddystoneURL = function( callback )
+{
+  this.sendGetCommand(this.uartCmd.eddystoneURL, null, callback);
+};
+
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.setEddystoneURL = function( urlString, callback )
+{
+  //prepare value
+  var encodedURL;
+  if( urlString == null || urlString.trim() === '' ){
+    encodedURL = new Buffer(0);
+  }else{
+    try{
+      //Check that there's a http:// or https:// in at the beginning of a
+      // non empty url. if not add it.
+      var regex = /^([a-z]+)\:\/\//gi;
+      if( !regex.test(urlString) ){
+        urlString = 'http://' + urlString;
+      }
+      encodedURL = eddystoneEncoder.encode(urlString);
+    }catch(e){
+      if( callback != null ){
+        callback(null, e);
+      }
+      return;
+    }
+  }
+
+  var bytes = [dataUtils.uint8ToHex(0x10),dataUtils.uint8ToHex(0xea)];
+  for( var i = 0 ; i < encodedURL.length ; i++ ){
+    bytes.push(dataUtils.uint8ToHex(encodedURL.readUInt8(i)));
+  }
+
+  var dataHexStr = bytes.join('');
+  //
+  this.sendSetCommand(this.uartCmd.eddystoneURL, new Buffer(dataHexStr), callback);
 };
 
 
@@ -877,9 +940,6 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, 
 
 
   var cmdBuffer = this.getCommandString( isGet, cmdObject.cmd, data , true );
-  if( uartLoggingEnabled ){
-    console.log( '[UART>>] sending' , cmdBuffer.toString() , '( '+ cmdBuffer +' )');
-  }
   this.removeOldCallbacks(cmdObject.cmd);
   var cb = {
     cmd: cmdObject.cmd, 
@@ -917,7 +977,7 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, 
 UBeaconUARTController.prototype.writeRaw = function( data )
 {
   if( uartLoggingEnabled ){
-    console.log( '[UART>>] sending: ' , data.toString('hex'));
+    console.log( '[UART>>] sending: ' + data.toString('hex') + ' / ' + data.toString());
   }
   this.serialPort.write( data );
 };
@@ -1022,8 +1082,8 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = this.parseAdvertisingIntervalResponse( cmdByte, data );
       break;
     case this.uartCmd.advertisingSettings.cmd:
-      throw( 'Not implemented' );
-
+      responseData = this.parseAdvertisingSettingsRegisterResponse( cmdByte, data );
+      break;
     case this.uartCmd.uuid.cmd:
       responseData = this.parseHexStringResponse( cmdByte, data );
       break;
@@ -1034,8 +1094,8 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = this.parseUint16( cmdByte, data );
       break;
     case this.uartCmd.eddystoneURL.cmd:
-      throw( 'Not implemented' );
-
+      responseData = this.parseEddystoneURLResponse( cmdByte, data );
+      break;
     case this.uartCmd.measuredStrength.cmd:
       responseData = data;
       break;
@@ -1208,6 +1268,36 @@ UBeaconUARTController.prototype.parseConnectionInfoResponse = function( cmdByte,
 /**
  *
  */
+UBeaconUARTController.prototype.parseAdvertisingSettingsRegisterResponse = function( cmdByte, responseData )
+{
+  var reg = new UBeaconAdvertisingSettingsRegister();
+  reg.setFromBytes(responseData);
+  return reg;
+};
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.parseEddystoneURLResponse = function( cmdByte, responseData )
+{
+  var responseBuffer = new Buffer(responseData, 'hex');
+  var urlDataBuffer = new Buffer(responseBuffer.length-2);
+  responseBuffer.copy(urlDataBuffer, 0, 2);
+  if( urlDataBuffer.length > 0 ){
+    try{
+      var urlString = eddystoneEncoder.decode( new Buffer(urlDataBuffer) );
+      return urlString;      
+    }catch(e){
+      this.emit( this.EVENTS.ERROR, e );
+      return '';
+    }
+  }
+  return '';
+};
+
+/**
+ *
+ */
 UBeaconUARTController.prototype.parseAdvertisingIntervalResponse = function( cmdByte, responseData )
 {
   var interval = parseInt( responseData , 16 );
@@ -1355,7 +1445,7 @@ UBeaconUARTController.prototype.notifyResponse = function( cmdByte , data )
     if( typeof(this._callbacks[cmdByte].callback) === 'function'){
       var c = this._callbacks[cmdByte];
       this.removeOldCallbacks(cmdByte);   
-      c.callback(data);
+      c.callback(data, null);
     }    
   }else{
     // var error = new Error('No callback was assigned for 0x' + dataUtils.uint8ToHex(cmdByte) + ' command. Received ' + data);
@@ -1514,6 +1604,82 @@ UBeaconUARTController.prototype.dateToBCDAlarm = function( date )
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Advertising settings register object
+//////////////////////////////////////////////////////////////////////////////
+
+var _defaultScanResponseValue = 0x03;
+
+/**
+ * 
+ */
+function UBeaconAdvertisingSettingsRegister()
+{
+  //Not all attributes are yet supported
+  this.scanResponseInterval = _defaultScanResponseValue;
+  this.eddystoneInterval = 0x00;
+  this.iBeaconInterval = 0x01;
+}
+
+/**
+ *
+ */
+UBeaconAdvertisingSettingsRegister.prototype.setFromBytes = function( bytesHexString )
+{
+  var bytes = [
+    parseInt(bytesHexString.substr(0,2), 16),
+    parseInt(bytesHexString.substr(2,2), 16),
+    parseInt(bytesHexString.substr(4,2), 16),
+    parseInt(bytesHexString.substr(6,2), 16)
+  ];
+
+  this.eddystoneInterval = bytes[1];
+  this.scanResponseInterval = _defaultScanResponseValue;
+  this.iBeaconInterval = bytes[2];
+};
+
+/**
+ *
+ */
+UBeaconAdvertisingSettingsRegister.prototype.setFrom = function( advertisingSettingsRegister )
+{
+  this.scanResponseInterval = advertisingSettingsRegister.scanResponseInterval;
+  this.eddystoneInterval = advertisingSettingsRegister.eddystoneInterval;
+  this.iBeaconInterval = advertisingSettingsRegister.iBeaconInterval;
+};
+
+/**
+ *
+ */
+UBeaconAdvertisingSettingsRegister.prototype.setEddystoneEnabled = function( enable )
+{
+  this.eddystoneInterval = (enable === true ? 0x02 : 0x00);
+};
+
+/**
+ *
+ */
+UBeaconAdvertisingSettingsRegister.prototype.isEddystoneEnabled = function()
+{
+  return this.eddystoneInterval === 0x02;
+};
+
+/**
+ *
+ */
+UBeaconAdvertisingSettingsRegister.prototype.getBytes = function()
+{
+  var bytes = [];
+  //We currently don't allow to disable scan response
+  this.scanResponseInterval = _defaultScanResponseValue;
+  bytes.push(dataUtils.zeroPad(this.scanResponseInterval.toString(16),2));
+  bytes.push(dataUtils.zeroPad(this.eddystoneInterval.toString(16),2));
+  bytes.push(dataUtils.zeroPad(this.iBeaconInterval.toString(16),2));
+  bytes.push(dataUtils.zeroPad(0x00,2));
+  var bytesHexStr = bytes.join('');
+
+  return bytesHexStr;
+};
+//////////////////////////////////////////////////////////////////////////////
 // Mesh register object conversion functions
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1609,7 +1775,7 @@ UBeaconMeshSettingsRegister.prototype.getBytes = function()
   byte1 |= ( duration << 5 ) & 0xe0;  //0b11100000 mask
 
   //
-  var retVal = ''
+  var retVal = '';
 
   retVal += dataUtils.zeroPad((byte0).toString(16),2);
   retVal += dataUtils.zeroPad((byte1).toString(16),2);
