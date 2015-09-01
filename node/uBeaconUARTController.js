@@ -1632,7 +1632,7 @@ UBeaconAdvertisingSettingsRegister.prototype.setFromBytes = function( bytesHexSt
     parseInt(bytesHexString.substr(6,2), 16)
   ];
 
-  this.eddystoneInterval = bytes[1];
+  this.eddystoneInterval = bytes[0];
   this.scanResponseInterval = _defaultScanResponseValue;
   this.iBeaconInterval = bytes[2];
 };
@@ -1671,8 +1671,8 @@ UBeaconAdvertisingSettingsRegister.prototype.getBytes = function()
   var bytes = [];
   //We currently don't allow to disable scan response
   this.scanResponseInterval = _defaultScanResponseValue;
-  bytes.push(dataUtils.zeroPad(this.scanResponseInterval.toString(16),2));
   bytes.push(dataUtils.zeroPad(this.eddystoneInterval.toString(16),2));
+  bytes.push(dataUtils.zeroPad(this.scanResponseInterval.toString(16),2));
   bytes.push(dataUtils.zeroPad(this.iBeaconInterval.toString(16),2));
   bytes.push(dataUtils.zeroPad(0x00,2));
   var bytesHexStr = bytes.join('');

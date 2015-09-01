@@ -40,11 +40,11 @@ describe('UBeaconAdvertisingSettingsRegister data conversions', function(){
    */
   it('Check toData', function(done){
     reg.scanResponseInterval = _defaultScanResponseValue;
-    reg.eddystoneInterval = 0x03;
+    reg.eddystoneInterval = 0x02;
     reg.iBeaconInterval = 0x01;
 
     var bytesHexString = reg.getBytes();
-    expect(bytesHexString).to.equal('03030100');
+    expect(bytesHexString).to.equal('02030100');
     done();
   });
 
@@ -64,14 +64,14 @@ describe('UBeaconAdvertisingSettingsRegister data conversions', function(){
    */
   it('Check that scanResponse is immutable', function(done){
     reg.scanResponseInterval = 0x00;
-    reg.eddystoneInterval = 0x03;
+    reg.eddystoneInterval = 0x02;
     reg.iBeaconInterval = 0x01;
-    expect(reg.getBytes()).to.equal('03030100');
+    expect(reg.getBytes()).to.equal('02030100');
 
     reg.scanResponseInterval = 0xFF;
-    reg.eddystoneInterval = 0x02;
+    reg.eddystoneInterval = 0x04;
     reg.iBeaconInterval = 0x05;
-    expect(reg.getBytes()).to.equal('03020500');
+    expect(reg.getBytes()).to.equal('04030500');
     done();
   });
 
@@ -84,10 +84,10 @@ describe('UBeaconAdvertisingSettingsRegister data conversions', function(){
     reg.iBeaconInterval = 0x01;
 
     reg.setEddystoneEnabled(true);
-    expect(reg.getBytes()).to.equal('03020100');
+    expect(reg.getBytes()).to.equal('02030100');
 
     reg.setEddystoneEnabled(false);
-    expect(reg.getBytes()).to.equal('03000100');
+    expect(reg.getBytes()).to.equal('00030100');
     done();
   });
 });
