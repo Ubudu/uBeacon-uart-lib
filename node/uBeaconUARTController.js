@@ -930,7 +930,7 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, 
   // console.log( cmdObject.cmd , this.uartCmd.protocolVersion.cmd );
   if( cmdObject.availability != null ){
     if( dataUtils.versionGreaterThanOrEqual(this.deviceData.uartProtocolVersion, cmdObject.availability) === false ){
-      console.log('sendCommand, not supported');
+      console.log('command 0x' + dataUtils.uint8ToHex(cmdObject.cmd) + ' not supported.');
       var msg = 'Command 0x' + dataUtils.uint8ToHex(cmdObject.cmd) + ' is not available for protocol version: ' + this.deviceData.uartProtocolVersion;
       msg += ' Support has been added in ' + cmdObject.availability;
       var error = new Error(msg);

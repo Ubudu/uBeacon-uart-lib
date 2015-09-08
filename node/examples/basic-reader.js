@@ -131,6 +131,12 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       });
     },
     function(callback){
+      ubeacon.getEddystoneURL( function( url, error ){
+        console.log( '[ubeacon] Received EddystoneURL', url );
+        callback();
+      });
+    },
+    function(callback){
       ubeacon.getMeshSettingsRegisterObject( function( settings, error ){
         console.log( '[ubeacon] Mesh settings', settings);
         callback(error);
