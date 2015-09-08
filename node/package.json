@@ -1,6 +1,6 @@
 {
   "name": "node-ubeacon-uart-lib",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "Node.js library for UART communication with uBeacons.",
   "license": "BSD-2-Clause",
   "main": "./uBeaconUARTController",
@@ -12,7 +12,7 @@
     "commander": "2.8.1",
     "serialport": "1.7.4",
     "async": "1.2.1",
-    "eddystone-url-encoding": "1.0.0" 
+    "eddystone-url-encoding": "1.0.0"
   },
   "devDependencies": {
     "mocha": "2.2.5",
