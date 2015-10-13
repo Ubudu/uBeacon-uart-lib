@@ -139,7 +139,7 @@ function UBeaconUARTController( serialPort , baudRate )
         //filter incoming UART responses data 
         var tmp = /(r:.*$)/.exec(data);
         if( uartRawInputLoggingEnabled === true ){
-          console.log( 'Incoming UART data: ' , data );
+          console.log( '[UART,' + (+new Date()) + ',!!]', data );
         }
 
         if( tmp != null && tmp.length >= 1 ){
@@ -448,10 +448,8 @@ UBeaconUARTController.prototype.setRTCTime = function( date, callback )
  */
 UBeaconUARTController.prototype.setOpenDaySchedule = function( onTime, offTime, callback )
 {
-  // console.log( 'setOpenDaySchedule', onTime, offTime );
   var scheduleBCD = this.scheduleDatesToBCD( onTime, offTime );
   var data = scheduleBCD;
-  // console.log( 'rawData: ', data );
   this.sendSetCommand(this.uartCmd.RTCSchedule, new Buffer(data), callback);
 };
 
@@ -478,7 +476,6 @@ UBeaconUARTController.prototype.setAdvertisingState = function( advertisingOn , 
     boolByte = 1;
   }
   var data = dataUtils.uint8ToHex( boolByte );
-  // console.log( 'setAdvertisingState', boolByte , data );
   this.sendSetCommand(this.uartCmd.advertising, new Buffer(data), callback);
 };
 
@@ -927,7 +924,6 @@ UBeaconUARTController.prototype.getCommandString = function( isGet, cmdByte, dat
 UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, callback, expectResponse )
 {
   //Check if command is supported in current UART protocol? If not throw an error
-  // console.log( cmdObject.cmd , this.uartCmd.protocolVersion.cmd );
   if( cmdObject.availability != null ){
     if( dataUtils.versionGreaterThanOrEqual(this.deviceData.uartProtocolVersion, cmdObject.availability) === false ){
       console.log('command 0x' + dataUtils.uint8ToHex(cmdObject.cmd) + ' not supported.');
@@ -977,7 +973,7 @@ UBeaconUARTController.prototype.sendCommand = function( isGet, cmdObject, data, 
 UBeaconUARTController.prototype.writeRaw = function( data )
 {
   if( uartLoggingEnabled ){
-    console.log( '[UART>>] sending: ' + data.toString('hex') + ' / ' + data.toString());
+    console.log( '[UART,' + (+new Date()) + ',>>]' , data.toString('hex') , '/', data.toString());
   }
   this.serialPort.write( data );
 };
@@ -988,7 +984,7 @@ UBeaconUARTController.prototype.writeRaw = function( data )
 UBeaconUARTController.prototype.parseIncomingSerialData = function( serialDataBuffer )
 {
   if( uartLoggingEnabled ){
-    console.log( '[UART<<] received: ' , serialDataBuffer.toString() );
+    console.log( '[UART,' + (+new Date()) + ',<<]' , serialDataBuffer.toString() );
   }
   if( serialDataBuffer.length >= 3 ){
     
@@ -1350,7 +1346,6 @@ UBeaconUARTController.prototype.executeMeshEventMessage = function( cmdByte, res
   var srcAddr = parseInt(responseData.substr(0,4), 16);
   var msgType = parseInt(responseData.substr(4,2), 16);
 
-  //console.log( 'parseMeshEventMessage' , responseData, '->' , srcAddr, msgType );
   if( msgType === uartMeshMessageType.ack ){
     var txMsgType = parseInt(responseData.substr(6,2),16);
     var success = parseInt(responseData.substr(8,2),16);
