@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "commander": "2.8.1",
-    "serialport": "1.7.4",
+    "serialport": "2.0.0",
     "async": "1.2.1",
     "eddystone-url-encoding": "1.0.0"
   },
