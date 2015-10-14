@@ -18,7 +18,7 @@ If the driver has been installed successfuly you will notice a new "USB Serial P
 
 ## Extending beyond USB-UART cable
 
-If you are comfprtable with hardware you can interface the uBeacon device with your own equippment by connecting the USB lines directly to your hardware if it supports UART communication (eg. Arduino). The pinout for USB connector on uBeacon is:
+If you are comfortable with hardware you can interface the uBeacon device with your own equippment by connecting the USB lines directly to your hardware if it supports UART communication (eg. Arduino). The pinout for USB connector on uBeacon is:
 
 | USB pin | uBeacon USB pin | Host GPIO | 
 | --- | --- | --- | 
