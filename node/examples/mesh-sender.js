@@ -16,6 +16,8 @@ program
   .option('-s, --serial-port [port]', 'Serial port to use (eg. "COM10" od "/dev/tty.usbmodem1"' ,'/dev/tty.usbserial-A5026UEU')
   .option('-e, --enable-mesh', 'Tries to enable mesh if it is disabled on connected device')
   .option('-a, --destination-address [address]', 'Destination address of the device (as integer)', 12337)
+  .option('-m, --message [message]', 'Message to send', null)
+  .option('-i, --interval [interval]', 'Send interval', 10000)
   .parse(process.argv);
 
 var ubeacon = new UBeaconUARTController(program.serialPort, 115200);
@@ -24,6 +26,7 @@ var ubeacon = new UBeaconUARTController(program.serialPort, 115200);
 
 var msgCounter = 0;
 var meshSettings = new UBeaconMeshSettingsRegister();
+var interval = program.interval;
 
 ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
 
@@ -73,13 +76,18 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
     function(callback){
       console.log( 'Start sending messages... ');
       setInterval(function(){
-        msgCounter++;
-        var msg = 'Hello #' + msgCounter + ' from node.js';
-        console.log( '[ubeacon] Sending "' +msg+ '" to device: ' + program.destinationAddress );
+	var msg = '';
+	if( program.message != null ){
+	  msg = program.message;
+	}else{
+          msgCounter++;
+          msg = 'Hello #' + msgCounter + ' from node.js';
+        }
+	console.log( '[ubeacon] Sending "' +msg+ '" to device: ' + program.destinationAddress );
         ubeacon.sendMeshGenericMessage( program.destinationAddress, msg, function( response ){
           console.log( '[ubeacon] Mesh message #' + msgCounter + ' sent. Response: ' + response );
         });
-      }, 5000);
+      }, interval);
     },
   ], function(error, response){
     if( error != null ){
