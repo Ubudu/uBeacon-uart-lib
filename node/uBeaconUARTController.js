@@ -34,7 +34,7 @@ var uartMeshMessageType = {
 /**
  *
  */
-function UBeaconUARTController( serialPort , baudRate )
+function UBeaconUARTController( serialPort , baudRate , discoverDevice )
 {
   var self = this;
   this.ready = false;
@@ -148,15 +148,22 @@ function UBeaconUARTController( serialPort , baudRate )
         }
       });
       
-      //discover basic device info 
-      self.discoverBasicDeviceData( function(data, error){
-        if( error === null ){
-          self.ready = true;
-          self.emit( self.EVENTS.UART_READY );
-        }else{
-          self.emit( self.EVENTS.ERROR, error );
-        }
-      });
+      if( discoverDevice === false ){
+        //If no automatic discovery will be done we have to assume some UART protocol version
+        self.deviceData.uartProtocolVersion = '0.1.0';
+        self.ready = true;
+        self.emit( self.EVENTS.UART_READY );        
+      }else{
+        //discover basic device info 
+        self.discoverBasicDeviceData( function(data, error){
+          if( error === null ){
+            self.ready = true;
+            self.emit( self.EVENTS.UART_READY );
+          }else{
+            self.emit( self.EVENTS.ERROR, error );
+          }
+        });
+      }
 
       
     });

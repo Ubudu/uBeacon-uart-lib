@@ -1,6 +1,6 @@
 {
   "name": "node-ubeacon-uart-lib",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Node.js library for UART communication with uBeacons.",
   "license": "BSD-2-Clause",
   "main": "./uBeaconUARTController",
