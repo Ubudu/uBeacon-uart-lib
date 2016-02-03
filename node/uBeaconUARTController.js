@@ -1100,7 +1100,7 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       responseData = this.parseEddystoneURLResponse( cmdByte, data );
       break;
     case this.uartCmd.measuredStrength.cmd:
-      responseData = data;
+      responseData = this.parseUint8(cmdByte, data);
       break;
     case this.uartCmd.led.cmd:
       responseData = this.parseHexStringResponse( cmdByte, data );
