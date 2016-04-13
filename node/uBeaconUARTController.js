@@ -94,6 +94,7 @@ function UBeaconUARTController( serialPort , baudRate , discoverDevice )
     advertising:            {cmd:0x74,availability:'0.1.0'},   //'t'
     advertisingInterval:    {cmd:0x69,availability:'0.1.0'},   //'i'
     advertisingSettings:    {cmd:0x70,availability:'0.2.1'},   //'p'
+    securityMode:           {cmd:0x4d,availability:'0.3.0'},   //'M'
     uuid:                   {cmd:0x61,availability:'0.1.0'},   //'a'
     major:                  {cmd:0x66,availability:'0.1.0'},   //'f'
     minor:                  {cmd:0x67,availability:'0.1.0'},   //'g'
@@ -106,6 +107,9 @@ function UBeaconUARTController( serialPort , baudRate , discoverDevice )
     meshNetworkUUID:        {cmd:0x78,availability:'0.1.0'},   //'x'
     meshDeviceId:           {cmd:0x7a,availability:'0.1.0'},   //'z'
     meshStats:              {cmd:0x73,availability:'0.1.0'},   //'s'
+    BLEScan:                {cmd:0x71,availability:'0.3.0'},   //'q'
+    setSecret:              {cmd:0x53,availability:'0.3.0'},   //'S'
+    setPassword:            {cmd:0x50,availability:'0.3.0'},   //'P'
 
     eventReady:             {cmd:0x21,availability:'0.1.0'},   //'!'
     eventConnected:         {cmd:0x40,availability:'0.1.1'},   //'@'
@@ -589,6 +593,28 @@ UBeaconUARTController.prototype.getAdvertisingSettings = function( callback )
 {
   this.sendGetCommand(this.uartCmd.advertisingSettings, null, callback);
 };
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.setSecurityMode = function( securityMode, callback )
+{
+  var boolByte = 0;
+  if( securityMode === 1 ){
+    boolByte = 1;
+  }
+  var data = dataUtils.uint8ToHex( boolByte );
+  this.sendSetCommand(this.uartCmd.securityMode, new Buffer(data), callback);
+};
+
+/**
+ *
+ */
+UBeaconUARTController.prototype.getSecurityMode = function( callback )
+{
+  this.sendGetCommand(this.uartCmd.securityMode, null, callback);
+};
+
 
 /**
  *
@@ -1086,6 +1112,9 @@ UBeaconUARTController.prototype.convertIncomingResponseData = function( cmdByte,
       break;
     case this.uartCmd.advertisingSettings.cmd:
       responseData = this.parseAdvertisingSettingsRegisterResponse( cmdByte, data );
+      break;
+    case this.uartCmd.securityMode.cmd:
+      responseData = this.parseUint8( cmdByte, data );
       break;
     case this.uartCmd.uuid.cmd:
       responseData = this.parseHexStringResponse( cmdByte, data );
