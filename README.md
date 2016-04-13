@@ -1,32 +1,47 @@
-# uBeacon-uart-lib
+# node-uBeacon-uart-lib
 
-This repository contains libraries which can be used to communicate with uBeacon devices using USB-UART cable which is shipped along [uBeacon devices](http://ubudu.com/).
+## Introduction
 
-## Supported platforms
+The following files provide a node.js library, allowing to communicate with [uBeacon v2.0](http://ubudu.com/) devices over USB-UART cable, provided with the devices. 
 
-All platforms and devices which support USB host functionality and have FTDI drivers support can be used. This includes Linux, OSX, Windows platforms running on classical PC hardware or some more raw devices like Raspberry Pi, BeagleBone.
+The communication allows to adjust various settings of the device, as well as sending and receiving messages, over mesh supported from the 2.0 version.
 
-For convienience and reference node.js libraries with examples have been provided in [node folder](https://github.com/Ubudu/uBeacon-uart-lib/tree/master/node).
+## Installation
 
-## How it works
+```
+npm install node-ubeacon-uart-lib
+```
 
-To start using the code examples provided in this repository you will need to connect the host side (eg. PC) with a uBeacon device using the USB-UART cable. 
+## Usage
 
-If the OS you're using doesn't have FTDI drivers pre-installed go to [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm) and install drivers for the platform you want to work on.
+Refer to scripts in examples folder for demonstration of using the library.
 
-If the driver has been installed successfuly you will notice a new "USB Serial Port" in your system (eg. "*COM1*" on Windows, "*/dev//dev/tty.usbserial-A703JWRZ*"). This is the one which should be used to run examples contained in this repository.
+To launch the scripts you will need to specify identifier of the serial port to use. Depending on your specific configuration and platform it will be something similar to the following:
 
-## Extending beyond USB-UART cable
+**OSX/Linux:**
 
-If you are comfortable with hardware you can interface the uBeacon device with your own equippment by connecting the USB lines directly to your hardware if it supports UART communication (eg. Arduino). The pinout for USB connector on uBeacon is:
+```
+node basic-reader.js --serial-port=/dev/tty.usbserial-A703JWRZ
+```
 
-| USB pin | uBeacon USB pin | Host GPIO | 
-| --- | --- | --- | 
-| VCC | VCC + charge | VCC (3V3-5V) | 
-| D-  | TX  | RX |
-| D+  | RX  | TX |
-| GND | GND | GND |
+**Windows:**
 
-For UART communication only GND, RX, TX pins need to be connected. The VCC pin is used only for charging and power supply.
+```
+node basic-reader.js --serial-port=COM1
+```
 
-Communication baud rate is 115200.
+To determine the identifier of your serial port for OSX open terminal and type:
+
+```
+ls /dev/tty.*
+```
+
+It will result in a list similar to the following:
+
+```
+$ ls /dev/tty.*
+/dev/tty.Bluetooth-Incoming-Port	/dev/tty.usbserial-A703JWRZ
+/dev/tty.Bluetooth-Modem		
+```
+
+To determine the identifier for Windows you will need to go into device manager and look an entry named "*USB Serial Port (COMX)*" under "*Ports (COM and LPT)*" section.

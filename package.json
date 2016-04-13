@@ -6,7 +6,7 @@
   "main": "./uBeaconUARTController",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Ubudu/uBeacon-uart-lib/tree/master/node"
+    "url": "https://github.com/Ubudu/uBeacon-uart-lib/tree/master"
   },
   "dependencies": {
     "commander": "2.8.1",
