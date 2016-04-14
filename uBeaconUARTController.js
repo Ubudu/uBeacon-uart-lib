@@ -64,6 +64,7 @@ function UBeaconUARTController( serialPort , baudRate , discoverDevice )
     MSG:                          'message',
     DFU_ERROR:                    'dfu_error',
     DFU_WRITTEN:                  'dfu_written',
+    BLE_SCAN_REPORT:              'ble-scan-report'
   };
 
 
@@ -117,6 +118,7 @@ function UBeaconUARTController( serialPort , baudRate , discoverDevice )
     eventMeshMessage:       {cmd:0x5e,availability:'0.1.0'},   //'^'
     eventDfuError:          {cmd:0x2a,availability:'0.2.0'},   //'*'
     eventDfuWritten:        {cmd:0x23,availability:'0.2.0'},   //'#'
+    eventBleScanReport:     {cmd:0x3f,availability:'0.3.0'},   //'?' 
   };
 
   //Basic data of the connected device
@@ -899,6 +901,42 @@ UBeaconUARTController.prototype.sendMeshRemoteManagementMessage = function( dstA
 };
 
 
+UBeaconUARTController.prototype.setBleScan = function( enable, callback )
+{
+  var scanEnabled = ( enable === false ? 0x00 : 0x01 );
+  var data = dataUtils.uint8ToHex(scanEnabled);
+  var self = this;
+
+  async.waterfall([
+    //Enable mesh (required)
+    function(done){
+      var msr = new UBeaconMeshSettingsRegister();
+      msr.enabled = scanEnabled;
+      self.setMeshSettingsRegisterObject(msr, function(data, error){
+        done(error);
+      });
+    },
+    //Stop advertising (required)
+    function(done){
+      self.setAdvertisingState( !scanEnabled, function(data, error){
+        done(error);
+      });
+    },
+    function(done){
+      self.sendSetCommand(self.uartCmd.BLEScan, new Buffer(data), function(data, error){
+        done(error);
+      });
+    },
+  ], function(error, result){
+    callback(scanEnabled, error);
+  });
+};
+
+    // BLEScan:                {cmd:0x71,availability:'0.3.0'},   //'q'
+    // setSecret:              {cmd:0x53,availability:'0.3.0'},   //'S'
+    // setPassword:            {cmd:0x50,availability:'0.3.0'},   //'P'
+
+
 //////////////////////////////////////////////////////////////////////////////
 // Private functions
 //////////////////////////////////////////////////////////////////////////////
@@ -1034,7 +1072,8 @@ UBeaconUARTController.prototype.parseIncomingSerialData = function( serialDataBu
         cmdByte === this.uartCmd.eventMeshMessage.cmd || 
         cmdByte === this.uartCmd.eventConnected.cmd || 
         cmdByte === this.uartCmd.eventDfuError.cmd || 
-        cmdByte === this.uartCmd.eventDfuWritten.cmd ){
+        cmdByte === this.uartCmd.eventDfuWritten.cmd || 
+        cmdByte === this.uartCmd.eventBleScanReport.cmd ){
       this.executeIncomingEventData( cmdByte, data );
     }else{
       var responseData = this.convertIncomingResponseData( cmdByte, data );
@@ -1185,6 +1224,9 @@ UBeaconUARTController.prototype.executeIncomingEventData = function( eventByte, 
       break;
     case this.uartCmd.eventDfuWritten.cmd:
       this.executeDFUWrittenEventMessage( eventByte, data );
+      break;
+    case this.uartCmd.eventBleScanReport.cmd:
+      this.executeBLEScanReportMessage( eventByte, data );
       break;
   }
 };
@@ -1448,6 +1490,48 @@ UBeaconUARTController.prototype.executeDFUWrittenEventMessage = function( cmdByt
   this.emit( this.EVENTS.DFU_WRITTEN, controlValue );    
 };
 
+/**
+ *
+ */
+UBeaconUARTController.prototype.executeBLEScanReportMessage = function( cmdByte, responseData )
+{
+  if( responseData && responseData.length > 0 ){
+    var reportDataHexString = responseData;
+
+    var macAddr = reportDataHexString.substr(8,12);
+    var rssi = -255 + parseInt(reportDataHexString.substr(20,2),16);
+    var advDataLength = parseInt(reportDataHexString.substr(22,2),16);
+    var advData = reportDataHexString.substr(24,2*advDataLength);
+
+    var device = {
+      mac: macAddr,
+      rssi: rssi,
+      advData: advData,
+      beaconData: null,
+    };
+    // device.data = reportDataHexString.substr(8);
+    // device.rssi = rssi;
+
+    if( advData.length >= 60 ){
+      var re = /ff4c000215/;
+      var m = advData.match(re);
+      if( m ){
+        var iBeaconDataHexStr = advData.substr( m.index + 10 );
+        if( iBeaconDataHexStr.length == 42 ){
+          device.beaconData = {
+            uuid: iBeaconDataHexStr.substr(0, 32),
+            major: parseInt(iBeaconDataHexStr.substr(32,4),16),
+            minor: parseInt(iBeaconDataHexStr.substr(36,4),16),
+            measureStrength: -255 + parseInt(iBeaconDataHexStr.substr(40,2),16)
+          };
+        }    
+      }
+    }
+
+    this.emit(this.EVENTS.BLE_SCAN_REPORT, device);
+  }
+
+};
 //////////////////////////////////////////////////////////////////////////////
 // Helper functions
 //////////////////////////////////////////////////////////////////////////////
@@ -1838,3 +1922,7 @@ UBeaconMeshStats.prototype.setFromBytes = function( bytesHexString )
     this.received = parseInt(bytesHexString.substr(8,4), 16);
   }
 };
+
+
+//////
+
