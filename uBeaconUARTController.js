@@ -932,11 +932,6 @@ UBeaconUARTController.prototype.setBleScan = function( enable, callback )
   });
 };
 
-    // BLEScan:                {cmd:0x71,availability:'0.3.0'},   //'q'
-    // setSecret:              {cmd:0x53,availability:'0.3.0'},   //'S'
-    // setPassword:            {cmd:0x50,availability:'0.3.0'},   //'P'
-
-
 //////////////////////////////////////////////////////////////////////////////
 // Private functions
 //////////////////////////////////////////////////////////////////////////////
