@@ -161,36 +161,6 @@ ubeacon.on(ubeacon.EVENTS.UART_READY, function(){
       });
     },
     function(callback){
-      ubeacon.getSecurityMode( function(mode, error){
-        console.log('getSecurityMode', mode);
-        callback(error);
-      });
-    },
-    function(callback){
-      ubeacon.setSecurityMode( 1, function(mode, error){
-        console.log('setSecurityMode', mode);
-        callback(error);
-      });
-    },
-    function(callback){
-      ubeacon.getSecurityMode( function(mode, error){
-        console.log('getSecurityMode', mode);
-        callback(error);
-      });
-    },
-    function(callback){
-      ubeacon.setSecurityMode( 0, function(mode, error){
-        console.log('setSecurityMode', mode);
-        callback(error);
-      });
-    },
-    function(callback){
-      ubeacon.getSecurityMode( function(mode, error){
-        console.log('getSecurityMode', mode);
-        callback(error);
-      });
-    },
-    function(callback){
       console.log('Done. Waiting for events (eg. button press)');
       callback(null);
     }
